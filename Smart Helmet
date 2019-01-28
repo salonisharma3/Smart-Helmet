@@ -1,0 +1,249 @@
+#include <SoftwareSerial.h>
+
+#include <TinyGPS.h>
+
+#define echoPin 7
+
+#define trigPin 8
+
+const int x_pin = A0;  // Analog input pin that the potentiometer is attached to
+
+const int y_pin = A1;// Analog output pin that the LED is attached to
+
+const int z_pin = A2;
+
+const int buzzer_pin = 13;
+
+const int tilt_pin = 2;
+
+#define echoPin 7
+
+#define trigPin 8
+
+ 
+
+ 
+
+/* This sample code demonstrates the normal use of a TinyGPS object.
+
+   It requires the use of SoftwareSerial, and assumes that you have a
+
+   4800-baud serial GPS device hooked up on pins 4(rx) and 3(tx).
+
+*/
+
+ 
+
+TinyGPS gps;
+
+SoftwareSerial ss(3,4);
+
+SoftwareSerial cell(10, 11);
+
+void setup()
+
+{
+
+pinMode(trigPin, OUTPUT);
+
+pinMode(echoPin, INPUT);
+
+Serial.begin(9600);
+
+ss.begin(9600);
+
+ 
+
+//
+
+Serial.print(“SMART HELMET & ACCIDENT PREVENTION SYSTEM “); Serial.println(TinyGPS::library_version());
+
+Serial.println(“Dept. of E$IT”);
+
+Serial.println();
+
+pinMode(tilt_pin, INPUT);
+
+}
+
+void loop()
+
+{
+
+boolean tilt = digitalRead(tilt_pin);
+
+int   x_direction  = analogRead(x_pin);
+
+int   y_direction  = analogRead(y_pin);
+
+int   z_direction  = analogRead(z_pin);
+
+// map it to the range of the analog out:
+
+x_direction = map( x_direction, 0, 1023, 0, 255);
+
+y_direction = map( y_direction, 0, 1023, 0, 255);
+
+z_direction = map( z_direction, 0, 1023, 0, 255);
+
+ 
+
+int distance,duration;
+
+digitalWrite(trigPin, HIGH);
+
+delay(100);
+
+digitalWrite(trigPin, LOW);
+
+duration=pulseIn(echoPin, HIGH);
+
+distance=(duration/2)/29.1;
+
+/*Serial.print(distance);
+
+Serial.print(“CM”);
+
+Serial.println(“”);
+
+delay(500);
+
+ 
+
+ 
+
+ 
+
+/* This sample code demonstrates the normal use of a TinyGPS object.
+
+   It requires the use of SoftwareSerial, and assumes that you have a
+
+   4800-baud serial GPS device hooked up on pins 4(rx) and 3(tx).
+
+*/
+
+int sensor = digitalRead(tilt_pin);
+
+float flat, flon;
+
+bool newData = false;
+
+unsigned long chars;
+
+unsigned short sentences, failed;
+
+ 
+
+/* For one second we parse GPS data and report some key values*/
+
+ 
+
+for (unsigned long start = millis(); millis() – start < 1000;)
+
+{
+
+while (ss.available())
+
+{
+
+char c = ss.read();
+
+// Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+
+if (gps.encode(c)) // Did a new valid sentence come in?
+
+newData = true;
+
+}
+
+}
+
+if (newData)
+
+{
+
+unsigned long age;
+
+gps.f_get_position(&flat, &flon, &age);
+
+ 
+
+ 
+
+/*Serial.print(“LAT=”);
+
+Serial.print(flat == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6);
+
+Serial.print(” LON=”);
+
+Serial.print(flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6);
+
+Serial.print(” SAT=”);
+
+Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
+
+Serial.print(” PREC=”);
+
+Serial.println(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());*/
+
+}
+
+if(tilt == false && x_direction > 100 && distance <10|| tilt == false && z_direction < 90 && distance <10)
+
+{
+
+//Serial.print(“sending sms…….”);
+
+cell.begin(9600);
+
+cell.println(“AT+CMGF=1”);    //Sets the GSM Module in Text Mode
+
+delay(500);  // Delay of 1000 milli seconds or 1 second
+
+cell.println(“AT+CMGS=\”x\”\r”); // Replace x with mobile number
+
+delay(500);
+
+cell.println(“LATITUDES =”);// The SMS text you want to send
+
+cell.println(flat ==TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat, 6);
+
+cell.println(“LONGITUDES =”);// The SMS text you want to send
+
+cell.println(flon == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon, 6);
+
+delay(500);
+
+cell.println((char)26);// ASCII code of CTRL+Z
+
+digitalWrite(buzzer_pin, HIGH);
+
+delay(10000);
+
+}
+
+if (tilt == false && x_direction > 100 || tilt == false && z_direction < 90)
+
+{
+
+digitalWrite(buzzer_pin, HIGH);
+
+}
+
+else if (distance < 10)
+
+{
+
+digitalWrite(buzzer_pin, HIGH);
+
+}
+
+else
+
+{
+
+digitalWrite(buzzer_pin, LOW);
+
+}
+
+}
